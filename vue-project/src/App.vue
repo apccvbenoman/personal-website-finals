@@ -1,47 +1,53 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import { ref, onMounted } from 'vue';
+import { supabase } from './lib/supabase';
+
+const guestbookEntries = ref([]);
+const name = ref('');
+const message = ref('');
+
+const fetchGuestbook = async () => {
+  const { data, error } = await supabase.from('guestbook').select('*').order('created_at', { ascending: false });
+  if (error) console.error(error);
+  else guestbookEntries.value = data;
+};
+
+const addEntry = async () => {
+  if (!name.value || !message.value) return;
+  const { error } = await supabase.from('guestbook').insert([{ name: name.value, message: message.value }]);
+  if (error) console.error(error);
+  else {
+    name.value = '';
+    message.value = '';
+    fetchGuestbook(); // Refresh the list
+  }
+};
+
+onMounted(fetchGuestbook);
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
+  <div class="container">
+    <h1>Guestbook</h1>
+    
+    <form @submit.prevent="addEntry">
+      <input v-model="name" placeholder="Your Name" required />
+      <textarea v-model="message" placeholder="Your Message" required></textarea>
+      <button type="submit">Sign Guestbook</button>
+    </form>
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
-  </header>
-
-  <main>
-    <TheWelcome />
-  </main>
+    <ul>
+      <li v-for="entry in guestbookEntries" :key="entry.id">
+        <strong>{{ entry.name }}</strong>: {{ entry.message }}
+      </li>
+    </ul>
+  </div>
 </template>
 
 <style scoped>
-header {
-  line-height: 1.5;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-}
+.container { max-width: 600px; margin: auto; padding: 20px; text-align: center; }
+input, textarea { width: 100%; margin: 5px 0; padding: 8px; }
+button { padding: 8px 15px; cursor: pointer; }
+ul { list-style: none; padding: 0; }
+li { padding: 10px; border-bottom: 1px solid #ccc; }
 </style>
